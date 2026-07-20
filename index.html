@@ -286,6 +286,24 @@ footer .promise{
   section{padding:78px 0}
   .hero{padding:72px 0 60px}
 }
+@media (max-width:560px){
+  html,body{overflow-x:hidden}
+  .container{padding-left:18px;padding-right:18px}
+  .nav{gap:10px}.nav .links{gap:0}.nav .btn-small{padding:8px 12px}
+  .hero{padding-top:64px}
+  .wordmark{width:min(245px,72vw)}
+  .hero .tag{font-size:10.5px;letter-spacing:.18em}
+  .chip{max-width:100%;white-space:normal;justify-content:center;line-height:1.35}
+  .hero h1{font-size:clamp(31px,9.2vw,40px)}
+  .hero .sub{font-size:16.5px}
+  .hero .cta{flex-direction:column;align-items:stretch}
+  .hero .cta .btn{width:100%}
+  .trust-strip{gap:9px 18px}
+  .line-stage{width:100%}
+  .line-shell{width:min(334px,calc(100vw - 48px))}
+  canvas#wave{width:100%}
+  .line-caption{font-size:15px}
+}
 @media (prefers-reduced-motion: reduce){
   .chip .pulse::after{animation:none;display:none}
 }
@@ -326,7 +344,7 @@ footer .promise{
       <span><span class="t-dot"></span>Processed on-device</span>
       <span><span class="t-dot"></span>Works with Wi-Fi off</span>
       <span><span class="t-dot"></span>No account, no telemetry</span>
-      <span><span class="t-dot"></span>Windows 10 &amp; 11</span>
+      <span><span class="t-dot"></span>Windows now · macOS next</span>
     </div>
 
     <div class="line-stage">
@@ -456,6 +474,10 @@ footer .promise{
         <details>
           <summary>How does the free trial work?</summary>
           <p>A 7-day Microsoft Store trial is planned for launch. Trial availability and regional terms will be confirmed on the Store listing before sales open.</p>
+        </details>
+        <details>
+          <summary>Is there a Mac version?</summary>
+          <p>It's in development — same idea, same privacy: hold a key, speak, release, all on-device. The beta is Windows-first; macOS follows. If you're on a Mac, join the beta list and say so, and you'll be first in line when it's ready.</p>
         </details>
         <details>
           <summary>What languages does it support?</summary>
