@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Holdline — private local dictation for Windows</title>
+<meta name="description" content="Hold Ctrl+Space, speak, release — your words appear where the cursor is. Private, on-device English dictation for Windows. Join the Holdline beta.">
+<link rel="icon" href="assets/favicon.ico">
+<meta property="og:title" content="Holdline — private local dictation for Windows">
+<meta property="og:description" content="One hotkey. One line of light. Nothing saved. Join the Windows beta.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://getholdline.com">
+<noscript><style>[data-reveal]{opacity:1 !important;transform:none !important}</style></noscript>
+<style>
+/* Self-hosted type — nothing loads from third parties on this page. */
+@font-face{font-family:"Instrument Serif";src:url(assets/fonts/instrumentserif-400-normal.woff2) format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Instrument Serif";src:url(assets/fonts/instrumentserif-400-italic.woff2) format("woff2");font-weight:400;font-style:italic;font-display:swap}
+@font-face{font-family:"Inter";src:url(assets/fonts/inter-400-normal.woff2) format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Inter";src:url(assets/fonts/inter-500-normal.woff2) format("woff2");font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:"Inter";src:url(assets/fonts/inter-600-normal.woff2) format("woff2");font-weight:600;font-style:normal;font-display:swap}
+
+:root{
+  --bg:#FBFBFC; --surface:#FFFFFF; --surface-2:#F4F4F6;
+  --text:#17171A; --text-2:#5F5F69; --text-3:#92929B;
+  --border:rgba(0,0,0,.08); --border-strong:rgba(20,20,25,.16);
+  --accent:#55657A; --green:#3E9B67; --wave:#2B2B30;
+  --radius:22px; --radius-ctl:12px;
+  --font-display:"Instrument Serif",Georgia,"Times New Roman",serif;
+  --font-body:"Inter","Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;
+  --shadow-soft:0 24px 70px rgba(15,18,28,.10),0 6px 18px rgba(15,18,28,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#161618; --surface:#1E1E21; --surface-2:#222226;
+    --text:#F5F5F7; --text-2:#A8A8B1; --text-3:#7A7A83;
+    --border:rgba(255,255,255,.09); --border-strong:rgba(255,255,255,.18);
+    --accent:#8DA0B8; --green:#5CBB86; --wave:#D9D9DE;
+    --shadow-soft:0 24px 70px rgba(0,0,0,.45),0 6px 18px rgba(0,0,0,.3);
+  }
+  .wordmark{filter:invert(1)}
+  .shot-light{display:none}
+  .shot-dark{display:block}
+}
+@media (prefers-color-scheme: light){
+  .shot-dark{display:none}
+  .shot-light{display:block}
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:var(--font-body);
+  background:var(--bg); color:var(--text);
+  font-size:16px; line-height:1.65;
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+}
+::selection{background:color-mix(in srgb, var(--accent) 24%, transparent)}
+.container{max-width:860px;margin:0 auto;padding:0 28px}
+a{color:var(--accent)}
+
+/* reveal-on-scroll (disabled under reduced motion) */
+[data-reveal]{opacity:0;transform:translateY(14px);
+  transition:opacity .7s cubic-bezier(.2,.6,.2,1), transform .7s cubic-bezier(.2,.6,.2,1)}
+[data-reveal].in{opacity:1;transform:none}
+@media (prefers-reduced-motion: reduce){
+  [data-reveal]{opacity:1;transform:none;transition:none}
+  html{scroll-behavior:auto}
+}
+
+/* header */
+header{
+  position:sticky;top:0;z-index:50;
+  background:color-mix(in srgb, var(--bg) 86%, transparent);
+  backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--border);
+}
+.nav{display:flex;align-items:center;gap:20px;height:62px}
+.nav .brand{font-weight:600;font-size:16px;letter-spacing:-.01em;color:var(--text);
+  text-decoration:none;display:flex;align-items:center;gap:10px}
+.nav .brand img{width:24px;height:24px;border-radius:6px}
+.nav .links{margin-left:auto;display:flex;gap:26px;align-items:center}
+.nav .links a{color:var(--text-2);text-decoration:none;font-size:13.5px;font-weight:500}
+.nav .links a:hover{color:var(--text)}
+
+.btn{
+  display:inline-block;text-decoration:none;text-align:center;
+  padding:12px 26px;border-radius:12px;
+  font-weight:600;font-size:14.5px;letter-spacing:.005em;
+  border:1px solid transparent;cursor:pointer;
+  transition:transform .16s ease, box-shadow .16s ease, background .16s ease, opacity .16s ease;
+}
+.btn-primary{
+  background:var(--text);color:var(--bg);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.14), 0 10px 26px rgba(15,18,28,.16);
+}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:inset 0 1px 0 rgba(255,255,255,.14), 0 14px 32px rgba(15,18,28,.20)}
+.btn-secondary{background:var(--surface);border-color:var(--border-strong);color:var(--text)}
+.btn-secondary:hover{background:var(--surface-2);transform:translateY(-1px)}
+.btn-small{padding:8px 18px;font-size:13.5px}
+
+/* hero */
+.hero{padding:104px 0 78px;text-align:center;position:relative}
+.hero::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(720px 420px at 50% 0%,
+    color-mix(in srgb, var(--accent) 7%, transparent), transparent 70%);
+}
+.hero>*{position:relative}
+.wordmark{width:min(280px,68vw);height:auto;margin-bottom:8px}
+.hero .tag{
+  color:var(--text-3);font-size:12.5px;font-weight:500;
+  letter-spacing:.22em;text-transform:uppercase;margin-bottom:46px;
+}
+.hero h1{
+  font-family:var(--font-display);font-weight:400;
+  font-size:clamp(36px,6vw,58px);letter-spacing:-.01em;
+  line-height:1.12;margin-bottom:22px;
+}
+.hero h1 em{font-style:italic}
+.hero .sub{color:var(--text-2);font-size:17.5px;max-width:520px;margin:0 auto 40px;line-height:1.7}
+.hero .cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:16px}
+.hero .fine{color:var(--text-3);font-size:13px}
+kbd{
+  background:var(--surface);border:1px solid var(--border-strong);
+  border-bottom-width:2px;border-radius:9px;padding:1px 12px 2px;
+  font-family:var(--font-body);font-size:.62em;font-weight:600;
+  letter-spacing:.02em;white-space:nowrap;vertical-align:.08em;
+  box-shadow:0 2px 6px rgba(15,18,28,.06);
+}
+.steps kbd, .sub kbd{font-size:.85em;padding:1px 8px}
+
+/* the line */
+.line-stage{margin:64px auto 0;max-width:520px}
+.line-shell{
+  background:#0C0D11;border:1px solid rgba(255,255,255,.10);
+  border-radius:999px;padding:11px 20px;width:334px;margin:0 auto;
+  box-shadow:0 24px 60px rgba(15,18,28,.32), 0 0 90px rgba(120,160,210,.10);
+}
+canvas#wave{display:block;width:292px;height:28px}
+.line-caption{
+  font-family:var(--font-display);font-style:italic;
+  color:var(--text-3);font-size:16.5px;margin-top:18px;text-align:center;
+}
+
+/* sections */
+section{padding:104px 0;position:relative}
+section::before{
+  content:"";position:absolute;top:0;left:50%;transform:translateX(-50%);
+  width:min(860px,88vw);height:1px;
+  background:linear-gradient(90deg, transparent, var(--border-strong), transparent);
+}
+.kicker{
+  font-size:11px;font-weight:600;letter-spacing:.24em;color:var(--text-3);
+  text-transform:uppercase;margin-bottom:14px;
+}
+h2{
+  font-family:var(--font-display);font-weight:400;
+  font-size:clamp(28px,4vw,38px);letter-spacing:-.01em;line-height:1.15;
+  margin-bottom:16px;
+}
+.lede{color:var(--text-2);font-size:16.5px;max-width:560px}
+
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:44px}
+.card-hover{transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease}
+.card-hover:hover{transform:translateY(-2px);box-shadow:var(--shadow-soft);border-color:var(--border-strong)}
+.step{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:26px}
+.step .n{
+  font-family:var(--font-display);font-size:19px;color:var(--text-3);
+  margin-bottom:12px;
+}
+.step h3{font-size:15.5px;font-weight:600;margin-bottom:6px;letter-spacing:-.01em}
+.step p{color:var(--text-2);font-size:14px;line-height:1.6}
+
+.privacy blockquote{
+  font-family:var(--font-display);font-style:italic;font-weight:400;
+  font-size:clamp(26px,3.6vw,34px);letter-spacing:-.005em;
+  line-height:1.35;max-width:640px;
+}
+.privacy .points{margin-top:40px;display:grid;grid-template-columns:repeat(3,1fr);gap:28px}
+.point{font-size:14px;color:var(--text-2);line-height:1.65}
+.point b{display:block;color:var(--text);font-size:14.5px;font-weight:600;margin-bottom:6px;letter-spacing:-.01em}
+.point .dot{color:var(--green);margin-right:7px;font-size:9px;vertical-align:2px}
+
+.shot{margin-top:52px;text-align:center}
+.shot img{max-width:min(420px,88vw);height:auto;border-radius:18px}
+.shot figcaption{font-family:var(--font-display);font-style:italic;color:var(--text-3);font-size:15.5px;margin-top:12px}
+
+.features{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:40px}
+.feature{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:22px 24px}
+.feature h3{font-size:15px;font-weight:600;margin-bottom:5px;letter-spacing:-.01em}
+.feature p{color:var(--text-2);font-size:13.5px;line-height:1.6}
+
+/* pricing */
+.price-card{
+  max-width:400px;margin:48px auto 0;background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--radius);
+  padding:40px 38px 32px;text-align:center;
+  box-shadow:var(--shadow-soft);position:relative;
+}
+.price-badge{
+  position:absolute;top:-13px;left:50%;transform:translateX(-50%);
+  background:var(--text);color:var(--bg);
+  font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;
+  padding:5px 16px;border-radius:999px;white-space:nowrap;
+}
+.price{font-family:var(--font-display);font-size:72px;font-weight:400;letter-spacing:-.02em;line-height:1}
+.price small{font-family:var(--font-body);font-size:15px;color:var(--text-2);font-weight:400;letter-spacing:0}
+.price-card .later{color:var(--text-3);font-size:13px;margin:10px 0 26px}
+.includes{list-style:none;text-align:left;margin:0 auto 28px;max-width:280px}
+.includes li{padding:6.5px 0;font-size:14px;color:var(--text-2)}
+.includes li::before{content:"●";color:var(--green);font-size:8px;vertical-align:2px;margin-right:11px}
+.price-card .btn{width:100%}
+.price-card .fine{color:var(--text-3);font-size:12.5px;margin-top:13px}
+
+/* faq */
+.faq{max-width:620px;margin-top:34px}
+details{border-bottom:1px solid var(--border);padding:18px 0}
+summary{font-weight:500;font-size:15px;cursor:pointer;list-style:none;
+  display:flex;justify-content:space-between;align-items:center;gap:16px;letter-spacing:-.01em}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";font-family:var(--font-display);color:var(--text-3);font-size:22px;font-weight:400;flex:none}
+details[open] summary::after{content:"–"}
+details p{color:var(--text-2);font-size:14px;padding-top:10px;max-width:560px;line-height:1.7}
+
+/* requirements + footer */
+.reqs{color:var(--text-3);font-size:13.5px;margin-top:22px}
+footer{border-top:1px solid var(--border);padding:44px 0 60px;color:var(--text-3);font-size:13px}
+footer .cols{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap}
+footer a{color:var(--text-2);text-decoration:none;margin-right:20px;font-weight:500}
+footer a:hover{color:var(--text)}
+footer .promise{
+  font-family:var(--font-display);font-style:italic;
+  font-size:15px;margin-top:18px;
+}
+
+/* hero texture: a quiet dot grid fading out from the top */
+.hero::after{
+  content:"";position:absolute;inset:0 0 30%;pointer-events:none;
+  background-image:radial-gradient(
+    color-mix(in srgb, var(--text) 8%, transparent) 1px, transparent 1.5px);
+  background-size:24px 24px;
+  -webkit-mask-image:radial-gradient(640px 380px at 50% 12%, #000 15%, transparent 72%);
+  mask-image:radial-gradient(640px 380px at 50% 12%, #000 15%, transparent 72%);
+}
+
+/* beta status chip */
+.chip{
+  display:inline-flex;align-items:center;gap:9px;
+  background:var(--surface);border:1px solid var(--border-strong);
+  border-radius:999px;padding:7px 16px;
+  font-size:12.5px;font-weight:500;color:var(--text-2);
+  margin-bottom:38px;box-shadow:0 2px 12px rgba(15,18,28,.06);
+}
+.chip .pulse{width:7px;height:7px;border-radius:50%;background:var(--green);position:relative;flex:none}
+.chip .pulse::after{
+  content:"";position:absolute;inset:-4px;border-radius:50%;
+  border:1px solid var(--green);animation:chippulse 2.4s ease-out infinite;
+}
+@keyframes chippulse{0%{transform:scale(.5);opacity:.8}70%,100%{transform:scale(1.4);opacity:0}}
+
+/* trust strip under the CTAs */
+.trust-strip{
+  display:flex;gap:10px 28px;justify-content:center;flex-wrap:wrap;
+  margin-top:20px;font-size:13px;color:var(--text-3);font-weight:500;
+}
+.trust-strip span{display:inline-flex;align-items:center;gap:8px}
+.trust-strip .t-dot{width:5px;height:5px;border-radius:50%;background:var(--green);flex:none}
+
+/* nav beta badge */
+.badge{
+  font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--accent);border:1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius:999px;padding:2.5px 9px;
+}
+
+/* receipts (trust section) */
+.receipts{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:40px}
+.receipt{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:24px 26px}
+.receipt .num{font-family:var(--font-display);font-style:italic;color:var(--text-3);font-size:17px;display:block;margin-bottom:10px}
+.receipt h3{font-size:15px;font-weight:600;margin-bottom:5px;letter-spacing:-.01em}
+.receipt p{color:var(--text-2);font-size:13.5px;line-height:1.65}
+.receipt a{font-weight:500}
+
+@media (max-width:720px){
+  .steps,.privacy .points,.features,.receipts{grid-template-columns:1fr}
+  .nav .links a.hide-sm{display:none}
+  section{padding:78px 0}
+  .hero{padding:72px 0 60px}
+}
+@media (prefers-reduced-motion: reduce){
+  .chip .pulse::after{animation:none;display:none}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container nav">
+    <a class="brand" href="#top">
+      <img src="assets/favicon.ico" alt=""> Holdline <span class="badge">Beta</span>
+    </a>
+    <nav class="links">
+      <a href="#how" class="hide-sm">How it works</a>
+      <a href="#privacy" class="hide-sm">Privacy</a>
+      <a href="#pricing" class="hide-sm">Pricing</a>
+      <a class="btn btn-primary btn-small beta-link" href="mailto:support@getholdline.com?subject=Holdline%20beta">Join the beta</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+  <div class="container hero">
+    <img class="wordmark" src="assets/holdline-wordmark.png" alt="Holdline">
+    <div class="tag" style="margin-bottom:22px">Private local dictation for Windows</div>
+    <div><span class="chip"><span class="pulse"></span>Now in hardware beta · Microsoft Store launch to follow</span></div>
+    <h1>Hold <kbd>Ctrl + Space</kbd>. Speak. Release.<br>Your words appear <em>where the cursor is.</em></h1>
+    <p class="sub">
+      Dictation that works in every app, processed entirely on your computer.
+      No account. No cloud. No subscription.
+    </p>
+    <div class="cta">
+      <a class="btn btn-primary beta-link" href="mailto:support@getholdline.com?subject=Holdline%20beta">Join the private beta</a>
+      <a class="btn btn-secondary" href="#how">See how it works</a>
+    </div>
+    <div class="trust-strip" aria-label="Holdline commitments">
+      <span><span class="t-dot"></span>Processed on-device</span>
+      <span><span class="t-dot"></span>Works with Wi-Fi off</span>
+      <span><span class="t-dot"></span>No account, no telemetry</span>
+      <span><span class="t-dot"></span>Windows 10 &amp; 11</span>
+    </div>
+
+    <div class="line-stage">
+      <div class="line-shell"><canvas id="wave" width="584" height="56"></canvas></div>
+      <div class="line-caption">One hotkey. One line of light. Nothing saved.</div>
+    </div>
+  </div>
+
+  <section id="how">
+    <div class="container" data-reveal>
+      <div class="kicker">How it works</div>
+      <h2>Faster than typing.<br>Simpler than a platform.</h2>
+      <p class="lede">Holdline lives in your system tray and does exactly one thing, instantly.</p>
+      <div class="steps">
+        <div class="step card-hover"><div class="n">01</div><h3>Hold</h3>
+          <p>Press and hold <kbd>Ctrl + Space</kbd> in any app — email, docs, chat, code, browser.</p></div>
+        <div class="step card-hover"><div class="n">02</div><h3>Speak</h3>
+          <p>A thin line of light appears above your taskbar and rides your voice, so you always know it hears you.</p></div>
+        <div class="step card-hover"><div class="n">03</div><h3>Release</h3>
+          <p>Your words are typed at the cursor — punctuated, capitalized, filler words removed if you like.</p></div>
+      </div>
+      <figure class="shot">
+        <img class="shot-light" src="assets/panel-main-light.png" alt="The Holdline control panel: microphone test, response mode, and settings">
+        <img class="shot-dark" src="assets/panel-main-dark.png" alt="The Holdline control panel in dark mode">
+        <figcaption>The whole interface: one small panel, one line of light.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section id="privacy" class="privacy">
+    <div class="container" data-reveal>
+      <div class="kicker">Privacy</div>
+      <blockquote>“Nothing leaves your machine. Nothing is stored. Nothing to&nbsp;configure.”</blockquote>
+      <div class="points">
+        <div class="point"><b><span class="dot">●</span>Processed on-device</b>
+          The speech model runs on your CPU. Dictation works with Wi-Fi off.</div>
+        <div class="point"><b><span class="dot">●</span>No voice history</b>
+          Audio and transcripts are never written to disk. Holdline stores only your settings and custom words.</div>
+        <div class="point"><b><span class="dot">●</span>No account, no telemetry</b>
+          There is nothing to sign into and nothing phoning home. Diagnostics, if you export them, never include audio or text.</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="features">
+    <div class="container" data-reveal>
+      <div class="kicker">Built lean, engineered hard</div>
+      <h2>Every feature earns its place.</h2>
+      <div class="features">
+        <div class="feature card-hover"><h3>Instant capture</h3>
+          <p>The microphone stays warm, so the first word is never clipped. Bluetooth headphones? Music-friendly mode releases the mic between dictations.</p></div>
+        <div class="feature card-hover"><h3>Custom words</h3>
+          <p>Teach it names, brands, and jargon — capitalization preserved, stored locally, never uploaded.</p></div>
+        <div class="feature card-hover"><h3>Your hotkey</h3>
+          <p>Ctrl+Space by default; change it to any combination. Release to type, Esc to cancel, re-paste the last dictation anytime.</p></div>
+        <div class="feature card-hover"><h3>Accuracy, your call</h3>
+          <p>Automatic picks the best model for your hardware. Choose Fast for quick notes or Accurate for difficult speech.</p></div>
+        <div class="feature card-hover"><h3>Windows-native</h3>
+          <p>A real tray utility — light and dark mode, high-DPI, reduced-motion support. Not a web app in a window.</p></div>
+        <div class="feature card-hover"><h3>Works everywhere</h3>
+          <p>Types directly into whatever has focus, without touching your clipboard or clipboard history.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="trust">
+    <div class="container" data-reveal>
+      <div class="kicker">Receipts</div>
+      <h2>Trust, earned the boring way.</h2>
+      <p class="lede">No testimonials from people you can't verify. Just claims you can test and policies you can read.</p>
+      <div class="receipts">
+        <div class="receipt card-hover"><span class="num">01</span>
+          <h3>Verify it yourself</h3>
+          <p>Turn Wi-Fi off. Dictation keeps working, because the speech model lives on your machine. The privacy claim is a ten-second experiment, not a paragraph in a policy.</p></div>
+        <div class="receipt card-hover"><span class="num">02</span>
+          <h3>A real person answers</h3>
+          <p>Holdline is built by one engineer, not a growth team. <a href="mailto:support@getholdline.com">support@getholdline.com</a> reaches the person who wrote the code.</p></div>
+        <div class="receipt card-hover"><span class="num">03</span>
+          <h3>Policies written before sales</h3>
+          <p>Plain-language <a href="privacy.html">privacy</a>, <a href="terms.html">terms</a>, <a href="security.html">security</a>, and <a href="refunds.html">refund</a> pages — published before the Store listing opens, not after something goes wrong.</p></div>
+        <div class="receipt card-hover"><span class="num">04</span>
+          <h3>Nothing hidden in the box</h3>
+          <p>Every third-party component ships with its license inside the app, and the <a href="security.html">security page</a> lists exactly what Holdline writes to disk: your settings and your custom words. That's the whole list.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="pricing">
+    <div class="container" data-reveal>
+      <div class="kicker">Pricing</div>
+      <h2>Buy once. Keep forever.</h2>
+      <p class="lede">The planned Store offer is one price, every feature. Public sales open after the hardware beta.</p>
+      <div class="price-card">
+        <div class="price-badge">Proposed launch price</div>
+        <div class="price">$29 <small>once</small></div>
+        <div class="later">Final Store price may vary by region</div>
+        <ul class="includes">
+          <li>Full app, every feature</li>
+          <li>Bundled speech model — no downloads</li>
+          <li>Updates delivered by Microsoft Store</li>
+          <li>No account required, ever</li>
+          <li>Planned 7-day Store trial</li>
+        </ul>
+        <a class="btn btn-primary beta-link" href="mailto:support@getholdline.com?subject=Holdline%20beta" data-beta>Join the beta waitlist</a>
+        <div class="fine">Pre-release · Windows 10/11 (64-bit) · English dictation</div>
+      </div>
+      <p class="reqs" style="text-align:center">
+        Requirements: Windows 10 or 11 (64-bit), any microphone, 8 GB RAM recommended.
+        Runs locally on ordinary Intel and AMD CPUs.
+      </p>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="container" data-reveal>
+      <div class="kicker">Questions</div>
+      <h2>Fair questions, straight answers.</h2>
+      <div class="faq">
+        <details>
+          <summary>Does my voice really never leave my computer?</summary>
+          <p>Really. The speech model is bundled inside the installer and runs locally. Dictation works with your network cable unplugged. Audio and transcripts are never saved — the only things Holdline writes to disk are your preferences and any custom words you add.</p>
+        </details>
+        <details>
+          <summary>How is this different from Wispr Flow, Dragon, or Windows dictation?</summary>
+          <p>Holdline is deliberately narrow: one hotkey, local English transcription, and direct typing into the active app. It does not require an account or a cloud speech service. The proposed launch price is $29 once.</p>
+        </details>
+        <details>
+          <summary>How does the free trial work?</summary>
+          <p>A 7-day Microsoft Store trial is planned for launch. Trial availability and regional terms will be confirmed on the Store listing before sales open.</p>
+        </details>
+        <details>
+          <summary>What languages does it support?</summary>
+          <p>Holdline v1 is tuned for English for the lowest latency. More languages are on the roadmap.</p>
+        </details>
+        <details>
+          <summary>Do I need a powerful computer?</summary>
+          <p>No. Holdline picks an appropriate local model and runs on ordinary Intel and AMD CPUs. The hardware beta will establish the final minimum and recommended specifications.</p>
+        </details>
+        <details>
+          <summary>What about refunds?</summary>
+          <p>Microsoft Store purchases follow the Store's return process and applicable law. Read the <a href="refunds.html">refund policy</a> before buying.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="container">
+    <div class="cols">
+      <div>
+        <a href="privacy.html">Privacy</a>
+        <a href="terms.html">Terms</a>
+        <a href="refunds.html">Refunds</a>
+        <a href="support.html">Support</a>
+        <a href="security.html">Security</a>
+        <a href="https://github.com/justinjireh/holdline" rel="noopener">Source &amp; licenses</a>
+      </div>
+      <div>© 2026 Holdline</div>
+    </div>
+    <div class="promise">On-device · No voice history · Made for Windows</div>
+  </div>
+</footer>
+
+<script>
+/* Replace STORE_URL only after the public Partner Center listing is live. */
+const STORE_URL = "";
+if (STORE_URL) {
+  for (const el of document.querySelectorAll(".beta-link")) {
+    el.href = STORE_URL;
+    el.textContent = "Get Holdline from Microsoft Store";
+  }
+}
+
+/* ---- reveal on scroll ---- */
+if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  const io = new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      if (entry.isIntersecting) { entry.target.classList.add("in"); io.unobserve(entry.target); }
+    }
+  }, { threshold: 0.12 });
+  document.querySelectorAll("[data-reveal]").forEach((el) => io.observe(el));
+} else {
+  document.querySelectorAll("[data-reveal]").forEach((el) => el.classList.add("in"));
+}
+
+/* ---- the line of light ------------------------------------------------
+   The brand element: a calm hairline that periodically rides a simulated
+   voice, exactly in the product's visual language. */
+const canvas = document.getElementById("wave");
+const cx = canvas.getContext("2d");
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const N = 73;
+const U = Array.from({length: N}, (_, i) => -1 + 2 * i / (N - 1));
+const TAPER = U.map(u => Math.max(0, 1 - u * u) ** 1.7);
+let phase = 0, phase2 = 0, energy = 0, velocity = 0, target = 0, balance = 0, shownBalance = 0;
+
+/* a little speech script: [duration s, energy, spectral lean] */
+const SCRIPT = [[1.6,0,0],[.22,.55,-.4],[.16,.85,.1],[.12,.35,.6],[.2,.7,-.2],
+  [.14,.5,.5],[.26,.8,-.5],[.18,.3,.3],[.5,0,0],[.2,.6,-.3],[.16,.9,.2],
+  [.14,.45,.6],[.22,.75,-.4],[2.4,0,0]];
+let scriptIdx = 0, scriptT = 0;
+
+function springStep(pos, vel, tgt, dt, tau) {
+  const omega = 2 / Math.max(.001, tau);
+  const disp = pos - tgt, decay = Math.exp(-omega * dt);
+  const coupled = (vel + omega * disp) * dt;
+  return [tgt + (disp + coupled) * decay, (vel - omega * coupled) * decay];
+}
+
+let last = performance.now();
+function frame(now) {
+  requestAnimationFrame(frame);
+  const dt = Math.min(.05, (now - last) / 1000); last = now;
+
+  scriptT += dt;
+  const [dur, e, b] = SCRIPT[scriptIdx];
+  if (scriptT >= dur) { scriptT = 0; scriptIdx = (scriptIdx + 1) % SCRIPT.length; }
+  target = e * (0.75 + 0.25 * Math.sin(now / 90));
+  balance = b;
+
+  if (reduced) { energy = 0; } else {
+    [energy, velocity] = springStep(energy, velocity, target, dt,
+      target > energy ? .02 : .15);
+    shownBalance += (balance - shownBalance) * Math.min(1, dt / .12);
+    phase += 2 * Math.PI * (0.22 + 0.72 * Math.min(1, energy * 3)) * dt;
+    phase2 += 2 * Math.PI * 0.071 * dt;
+  }
+
+  const W = canvas.width, H = canvas.height, mid = H / 2;
+  cx.clearRect(0, 0, W, H);
+  const amp = 18 * (0.16 + 0.84 * energy ** .72) * Math.min(1, energy * 6 + 0.06);
+  const s1 = Math.sin(phase), c1 = Math.cos(phase);
+  const s2 = Math.sin(-.61 * phase + phase2), c2 = Math.cos(-.61 * phase + phase2);
+  cx.beginPath();
+  for (let i = 0; i < N; i++) {
+    const u = U[i];
+    const p = Math.sin(4 * Math.PI * u) * c1 + Math.cos(4 * Math.PI * u) * s1;
+    const q = Math.sin(6.7 * Math.PI * u + .64) * c2 + Math.cos(6.7 * Math.PI * u + .64) * s2;
+    const lean = Math.max(.2, 1 + .55 * shownBalance * u);
+    const y = mid - amp * lean * TAPER[i] * (0.78 * p + 0.22 * q);
+    const x = 8 + (u + 1) / 2 * (W - 16);
+    i ? cx.lineTo(x, y) : cx.moveTo(x, y);
+  }
+  cx.strokeStyle = "rgba(247,249,252,.96)";
+  cx.lineWidth = 2.2; cx.lineCap = "round"; cx.lineJoin = "round";
+  cx.shadowColor = "rgba(200,225,250,.5)"; cx.shadowBlur = 7;
+  cx.stroke();
+  cx.shadowBlur = 0;
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
